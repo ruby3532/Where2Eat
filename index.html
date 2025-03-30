@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTU午餐決策工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a73e8',
+                        secondary: '#4285f4',
+                        accent: '#34a853',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+        }
+        .card-hover {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen">
+        <!-- 過濾頁面 -->
+        <div v-if="currentPage === 'filter'" class="min-h-screen gradient-bg">
+            <div class="container mx-auto px-4 py-12">
+                <div class="text-center mb-12">
+                    <h1 class="text-4xl font-bold text-white mb-4">NTU午餐決策工具</h1>
+                    <p class="text-white/80 text-lg">找到最適合你的午餐選擇</p>
+                </div>
+                
+                <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8">
+                    <div class="mb-8">
+                        <label class="block text-gray-700 text-lg font-bold mb-4">
+                            步行時間
+                        </label>
+                        <div class="flex items-center space-x-6">
+                            <input 
+                                type="range" 
+                                v-model="walkingTime" 
+                                min="5" 
+                                max="30" 
+                                step="5"
+                                class="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
+                            >
+                            <span class="text-2xl font-bold text-primary min-w-[80px]">{{ walkingTime }}分鐘</span>
+                        </div>
+                        <div class="flex justify-between mt-2 text-sm text-gray-500">
+                            <span>5分鐘</span>
+                            <span>30分鐘</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-8">
+                        <label class="block text-gray-700 text-lg font-bold mb-4">
+                            餐廳類型
+                        </label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <button 
+                                v-for="type in restaurantTypes" 
+                                :key="type"
+                                @click="toggleType(type)"
+                                :class="[
+                                    'px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
+                                    selectedTypes.includes(type) 
+                                        ? 'bg-primary text-white shadow-lg shadow-primary/30' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ]"
+                            >
+                                {{ type }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-8">
+                        <label class="block text-gray-700 text-lg font-bold mb-4">
+                            自定義類型
+                        </label>
+                        <div class="flex space-x-3">
+                            <input 
+                                type="text" 
+                                v-model="customType" 
+                                placeholder="輸入餐廳類型"
+                                class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            >
+                            <button 
+                                @click="addCustomType"
+                                class="px-6 py-3 bg-accent text-white rounded-xl hover:bg-accent/90 transition-colors font-medium shadow-lg shadow-accent/30"
+                            >
+                                添加
+                            </button>
+                        </div>
+                    </div>
+
+                    <button 
+                        @click="viewResults"
+                        class="w-full py-4 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors font-medium text-lg shadow-lg shadow-primary/30"
+                    >
+                        開始搜尋
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 結果頁面 -->
+        <div v-if="currentPage === 'results'" class="min-h-screen bg-gray-50">
+            <div class="container mx-auto px-4 py-8">
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800">搜尋結果</h1>
+                        <p class="text-gray-600 mt-1">找到 {{ filteredRestaurants.length }} 間符合條件的餐廳</p>
+                    </div>
+                    <button 
+                        @click="currentPage = 'filter'"
+                        class="px-6 py-3 bg-white text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium shadow-md"
+                    >
+                        重新搜尋
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div 
+                        v-for="restaurant in filteredRestaurants" 
+                        :key="restaurant.name"
+                        class="bg-white rounded-xl shadow-md p-6 card-hover"
+                    >
+                        <div class="flex justify-between items-start mb-4">
+                            <h2 class="text-xl font-bold text-gray-800">{{ restaurant.name }}</h2>
+                            <span :class="[
+                                'px-3 py-1 rounded-full text-sm font-medium',
+                                restaurant.price === '平價' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                            ]">
+                                {{ restaurant.price }}
+                            </span>
+                        </div>
+                        <div class="space-y-2 mb-6">
+                            <div class="flex items-center text-gray-600">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                                <span>{{ restaurant.distance }} 公尺</span>
+                            </div>
+                            <div class="flex items-center text-gray-600">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                                <span>{{ restaurant.type }}</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <button 
+                                @click="selectRestaurant(restaurant)"
+                                class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                            >
+                                選擇此餐廳
+                            </button>
+                            <button 
+                                @click="viewDetails(restaurant)"
+                                class="px-4 py-2 text-gray-600 hover:text-gray-800"
+                            >
+                                查看詳情
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 詳情模態框 -->
+        <div v-if="showDetails" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl">
+                <div class="flex justify-between items-start mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">{{ selectedRestaurant.name }}</h2>
+                    <button @click="showDetails = false" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="font-bold text-gray-700 text-lg mb-3">基本資訊</h3>
+                        <div class="space-y-2">
+                            <div class="flex items-center text-gray-600">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                                <span>距離：{{ selectedRestaurant.distance }} 公尺</span>
+                            </div>
+                            <div class="flex items-center text-gray-600">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                                <span>類型：{{ selectedRestaurant.type }}</span>
+                            </div>
+                            <div class="flex items-center text-gray-600">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span>價格：{{ selectedRestaurant.price }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-bold text-gray-700 text-lg mb-3">菜單</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div 
+                                v-for="(item, index) in selectedRestaurant.menu" 
+                                :key="index"
+                                class="bg-gray-50 px-4 py-2 rounded-lg text-gray-700"
+                            >
+                                {{ item }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-4 pt-4">
+                        <a 
+                            :href="'https://www.google.com/search?q=' + encodeURIComponent(selectedRestaurant.name + ' 台大')"
+                            target="_blank"
+                            class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-center"
+                        >
+                            查看 Google 搜尋結果
+                        </a>
+                        <a 
+                            :href="'https://www.google.com/maps/search/' + encodeURIComponent(selectedRestaurant.name + ' 台大')"
+                            target="_blank"
+                            class="flex-1 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors text-center"
+                        >
+                            查看 Google Maps
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script>
+        const { createApp, ref, computed } = Vue
+
+        createApp({
+            setup() {
+                const currentPage = ref('filter')
+                const walkingTime = ref(15)
+                const selectedTypes = ref([])
+                const customType = ref('')
+                const showDetails = ref(false)
+                const selectedRestaurant = ref(null)
+
+                // 用戶位置（台大校園中心點）
+                const userLocation = {
+                    lat: 25.0173,
+                    lng: 121.5398
+                }
+
+                const restaurantTypes = [
+                    '台式料理',
+                    '日式料理',
+                    '韓式料理',
+                    '中式料理',
+                    '西式料理',
+                    '速食店',
+                    '麵食',
+                    '便當店'
+                ]
+
+                const restaurants = [
+                    {
+                        name: '八方雲集',
+                        type: '台式料理',
+                        price: '平價',
+                        distance: 500,
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['鍋貼', '水餃', '麵食', '湯品']
+                    },
+                    {
+                        name: '麥當勞',
+                        type: '速食店',
+                        price: '平價',
+                        distance: 800,
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['漢堡', '薯條', '飲料', '雞塊']
+                    },
+                    {
+                        name: 'Subway',
+                        type: '西式料理',
+                        price: '中價位',
+                        distance: 1200,
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['潛艇堡', '沙拉', '飲料', '餅乾']
+                    },
+                    {
+                        name: '吉野家',
+                        type: '日式料理',
+                        price: '中價位',
+                        distance: 1500,
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['牛丼', '豬丼', '咖哩飯', '味噌湯']
+                    },
+                    {
+                        name: '摩斯漢堡',
+                        type: '速食店',
+                        price: '中價位',
+                        distance: 2000,
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['漢堡', '米漢堡', '沙拉', '飲料']
+                    }
+                ]
+
+                const filteredRestaurants = computed(() => {
+                    const maxDistance = walkingTime.value * 80 // 假設步行速度為 80 公尺/分鐘
+                    return restaurants.filter(restaurant => {
+                        const matchesType = selectedTypes.value.length === 0 || 
+                            selectedTypes.value.includes(restaurant.type)
+                        const withinDistance = restaurant.distance <= maxDistance
+                        return matchesType && withinDistance
+                    })
+                })
+
+                const toggleType = (type) => {
+                    const index = selectedTypes.value.indexOf(type)
+                    if (index === -1) {
+                        selectedTypes.value.push(type)
+                    } else {
+                        selectedTypes.value.splice(index, 1)
+                    }
+                }
+
+                const addCustomType = () => {
+                    if (customType.value.trim() && !restaurantTypes.includes(customType.value)) {
+                        restaurantTypes.push(customType.value)
+                        customType.value = ''
+                    }
+                }
+
+                const viewResults = () => {
+                    currentPage.value = 'results'
+                }
+
+                const viewDetails = (restaurant) => {
+                    selectedRestaurant.value = restaurant
+                    showDetails.value = true
+                }
+
+                const selectRestaurant = (restaurant) => {
+                    alert(`已選擇 ${restaurant.name}！`)
+                }
+
+                return {
+                    currentPage,
+                    walkingTime,
+                    selectedTypes,
+                    customType,
+                    showDetails,
+                    selectedRestaurant,
+                    restaurantTypes,
+                    filteredRestaurants,
+                    toggleType,
+                    addCustomType,
+                    viewResults,
+                    viewDetails,
+                    selectRestaurant
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html> 
