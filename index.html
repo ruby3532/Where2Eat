@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Where2Eat - 找餐廳</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a73e8',
+                        secondary: '#4285f4',
+                        accent: '#34a853',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+        }
+        .card-hover {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        @keyframes modalAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #374151;
+        }
+        .form-group select,
+        .form-group input[type="text"],
+        .form-group input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.2s;
+            background-color: white;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+        .form-group select:focus,
+        .form-group input[type="text"]:focus,
+        .form-group input[type="number"]:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+        }
+        .form-group select:hover {
+            border-color: #1a73e8;
+        }
+        .form-group select option {
+            padding: 0.75rem;
+            font-size: 1rem;
+        }
+        .location-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .location-group .form-group {
+            margin-bottom: 0;
+        }
+        .tag-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .tag {
+            padding: 0.5rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .tag:hover {
+            border-color: #1a73e8;
+            background-color: rgba(26, 115, 232, 0.05);
+        }
+        .tag.selected {
+            background-color: #1a73e8;
+            color: white;
+            border-color: #1a73e8;
+        }
+        .tag.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .number-input-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .walking-time-display {
+            width: 100px;
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: #1f2937;
+            padding: 0.75rem;
+            background-color: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+        }
+        .number-input-group button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #e5e7eb;
+            background-color: white;
+            color: #1a73e8;
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .number-input-group button:hover {
+            background-color: #1a73e8;
+            color: white;
+            border-color: #1a73e8;
+        }
+        button[type="submit"] {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1.125rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);
+        }
+        .restaurant-card {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s;
+        }
+        .restaurant-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+        .restaurant-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+        .restaurant-card p {
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+        .price-tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .price-tag.cheap {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .price-tag.medium {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        .price-tag.expensive {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .time-budget-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .time-budget-group .form-group {
+            margin-bottom: 0;
+        }
+        .form-group input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.2s;
+            background-color: white;
+            -webkit-appearance: textfield;
+            -moz-appearance: textfield;
+            appearance: textfield;
+            background-image: none;
+            padding-right: 0.75rem;
+        }
+        .form-group input[type="number"]::-webkit-outer-spin-button,
+        .form-group input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen">
+        <!-- 第一頁：搜尋表單 -->
+        <div id="searchPage" class="container mx-auto px-4 py-8">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-gray-900 mb-2">Where2Eat</h1>
+                <p class="text-xl text-gray-600">Go Eating don't waste time!</p>
+            </div>
+            
+            <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8">
+                <form id="searchForm" @submit.prevent="viewResults">
+                    <div class="location-group">
+                        <div class="form-group">
+                            <label for="city">城市 <span class="text-red-500">*</span></label>
+                            <select id="city" v-model="selectedCity" required>
+                                <option value="">請選擇城市</option>
+                                <option value="taipei">台北市</option>
+                                <option value="newtaipei">新北市</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="district">地區 <span class="text-red-500">*</span></label>
+                            <select id="district" v-model="selectedDistrict" required>
+                                <option value="">請選擇地區</option>
+                                <option v-for="district in districts" :key="district" :value="district">
+                                    {{ district }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="street">街道 <span class="text-red-500">*</span></label>
+                            <select id="street" v-model="selectedStreet" required>
+                                <option value="">請選擇街道</option>
+                                <option v-for="street in streets" :key="street" :value="street">
+                                    {{ street }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="alley">巷弄（選填）</label>
+                        <input type="text" id="alley" v-model="selectedAlley" placeholder="例如：三段">
+                    </div>
+                    <div class="time-budget-group">
+                        <div class="form-group">
+                            <label for="walkingTime">步行時間（分鐘）<span class="text-red-500">*</span></label>
+                            <div class="number-input-group">
+                                <button type="button" @click="decreaseWalkingTime">-</button>
+                                <span class="walking-time-display">{{ walkingTime }}</span>
+                                <button type="button" @click="increaseWalkingTime">+</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="budget">預算（元）<span class="text-red-500">*</span></label>
+                            <input type="number" id="budget" v-model="budget" min="50" max="1000" step="50" required class="w-full">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>類型 <span class="text-red-500">*</span></label>
+                        <div class="mb-4">
+                            <div class="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    v-model="customType" 
+                                    placeholder="輸入自定義類型"
+                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    @keyup.enter="addCustomType"
+                                >
+                                <button 
+                                    type="button" 
+                                    @click="addCustomType"
+                                    class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                                >
+                                    添加
+                                </button>
+                            </div>
+                        </div>
+                        <div class="tag-group">
+                            <span 
+                                v-for="type in restaurantTypes" 
+                                :key="type"
+                                class="tag"
+                                :class="{ 
+                                    'selected': selectedTypes.includes(type),
+                                    'disabled': type !== '都可以' && selectedTypes.includes('都可以')
+                                }"
+                                @click="toggleType(type)"
+                            >
+                                {{ type }}
+                            </span>
+                            <span 
+                                v-for="type in customTypes" 
+                                :key="type"
+                                class="tag custom-tag"
+                                :class="{ 
+                                    'selected': selectedTypes.includes(type),
+                                    'disabled': selectedTypes.includes('都可以')
+                                }"
+                                @click="toggleType(type)"
+                            >
+                                {{ type }}
+                                <button 
+                                    @click.stop="removeCustomType(type)"
+                                    class="ml-2 text-gray-500 hover:text-red-500"
+                                >
+                                    ×
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                    <button type="submit">開始搜尋</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 第二頁：搜尋結果 -->
+        <div id="resultsPage" class="container mx-auto px-4 py-8" style="display: none;">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-900">搜尋結果</h2>
+                    <p class="text-gray-600 mt-1">找到 <span id="resultCount">0</span> 間符合條件的餐廳</p>
+                </div>
+            </div>
+            <div class="mb-6 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" @change="toggleSelectAll" :checked="isAllSelected">
+                        <span>全選</span>
+                    </label>
+                    <span class="text-gray-600">已選擇 {{ selectedRestaurants.length }} 間餐廳</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button @click="showSelectionMethodModal = true" 
+                        :disabled="selectedRestaurants.length === 0"
+                        class="px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50">
+                        開始選擇
+                    </button>
+                    <button @click="backToSearch" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors">
+                        返回篩選
+                    </button>
+                </div>
+            </div>
+            <div id="resultsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+
+        <!-- 選擇方式模態框 -->
+        <div v-if="showSelectionMethodModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl p-8 max-w-lg w-full mx-4">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold">選擇方式</h3>
+                    <button @click="showSelectionMethodModal = false" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 gap-4">
+                    <button @click="startWheel" class="p-4 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                        轉盤選擇
+                    </button>
+                    <button @click="startLottery" class="p-4 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors">
+                        抽籤選擇
+                    </button>
+                    <button @click="startScratch" class="p-4 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors">
+                        刮刮樂
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 轉盤模態框 -->
+        <div v-if="showWheelModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl p-8 max-w-lg w-full mx-4">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold">轉盤選擇</h3>
+                    <button @click="showWheelModal = false" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <canvas ref="wheelCanvas" class="w-full h-96 mb-6"></canvas>
+                <button @click="spinWheel" 
+                    :disabled="isSpinning"
+                    class="w-full py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50">
+                    {{ isSpinning ? '轉動中...' : '開始轉動' }}
+                </button>
+            </div>
+        </div>
+
+        <!-- 抽籤模態框 -->
+        <div v-if="showLotteryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl p-8 max-w-lg w-full mx-4">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold">抽籤選擇</h3>
+                    <button @click="showLotteryModal = false" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative h-64 mb-6">
+                    <img src="https://cdn-icons-png.flaticon.com/512/1998/1998610.png" 
+                         class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32"
+                         :class="{ 'animate-bounce': isDrawing }">
+                </div>
+                <button @click="drawLottery" 
+                    :disabled="isDrawing"
+                    class="w-full py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50">
+                    {{ isDrawing ? '抽籤中...' : '抽籤' }}
+                </button>
+            </div>
+        </div>
+
+        <!-- 刮刮樂模態框 -->
+        <div v-if="showScratchModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl p-8 max-w-lg w-full mx-4">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold">刮刮樂</h3>
+                    <button @click="showScratchModal = false" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative h-64 mb-6">
+                    <canvas ref="scratchCanvas" class="w-full h-full"></canvas>
+                    <div class="absolute inset-0 flex items-center justify-center text-2xl font-bold text-gray-600">
+                        刮開查看結果
+                    </div>
+                </div>
+                <button @click="resetScratch" 
+                    class="w-full py-3 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors">
+                    重新開始
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue
+
+        const app = createApp({
+            setup() {
+                const currentPage = ref('filter')
+                const walkingTime = ref(5)
+                const selectedTypes = ref([])
+                const customType = ref('')
+                const showDetails = ref(false)
+                const selectedRestaurant = ref(null)
+                const selectedRestaurants = ref([])
+                const wheelCanvas = ref(null)
+                const isSpinning = ref(false)
+                const showSelectionMethodModal = ref(false)
+                const selectedCity = ref('taipei')
+                const selectedDistrict = ref('大安區')
+                const selectedStreet = ref('羅斯福路')
+                const selectedAlley = ref('')
+                const budget = ref(150)
+                const showWheelModal = ref(false)
+                const showLotteryModal = ref(false)
+                const showScratchModal = ref(false)
+                const isDrawing = ref(false)
+                const scratchCanvas = ref(null)
+                const wheelCtx = ref(null)
+                const scratchCtx = ref(null)
+                const wheelAnimation = ref(null)
+                const wheelRotation = ref(0)
+                const wheelSpeed = ref(0)
+                const customTypes = ref([])
+
+                // 地區資料
+                const districts = computed(() => {
+                    if (selectedCity.value === 'taipei') {
+                        return ['大安區', '中正區', '信義區', '中山區', '松山區', '萬華區', '大同區', '士林區', '北投區', '內湖區', '南港區', '文山區']
+                    } else if (selectedCity.value === 'newtaipei') {
+                        return ['板橋區', '新莊區', '中和區', '永和區', '土城區', '樹林區', '三峽區', '鶯歌區', '三重區', '蘆洲區', '五股區', '泰山區', '林口區', '八里區', '淡水區', '三芝區', '石門區', '金山區', '萬里區', '汐止區', '瑞芳區', '貢寮區', '平溪區', '雙溪區', '新店區', '深坑區', '石碇區', '坪林區', '烏來區']
+                    }
+                    return []
+                })
+
+                // 街道資料
+                const streets = computed(() => {
+                    if (selectedDistrict.value === '大安區') {
+                        return ['羅斯福路', '新生南路', '和平東路', '復興南路', '信義路', '忠孝東路', '仁愛路', '建國南路', '建國北路', '敦化南路', '敦化北路', '安和路', '光復南路', '光復北路', '基隆路', '基隆路二段', '基隆路三段', '基隆路四段']
+                    } else if (selectedDistrict.value === '中正區') {
+                        return ['中山南路', '忠孝東路', '仁愛路', '信義路', '和平西路', '和平東路', '羅斯福路', '重慶南路', '重慶北路', '中華路', '中華路二段', '中華路三段', '中華路四段', '杭州南路', '杭州北路', '林森南路', '林森北路']
+                    } else if (selectedDistrict.value === '信義區') {
+                        return ['信義路', '忠孝東路', '仁愛路', '松仁路', '松智路', '松德路', '松山路', '松隆路', '松高路', '松壽路', '松智路', '松仁路', '松德路', '松山路', '松隆路', '松高路', '松壽路']
+                    } else if (selectedDistrict.value === '中山區') {
+                        return ['中山北路', '中山南路', '南京東路', '南京西路', '長春路', '民生東路', '民生西路', '民權東路', '民權西路', '建國北路', '建國南路', '林森北路', '林森南路']
+                    } else if (selectedDistrict.value === '松山區') {
+                        return ['南京東路', '南京西路', '民生東路', '民生西路', '民權東路', '民權西路', '八德路', '八德路二段', '八德路三段', '八德路四段', '光復北路', '光復南路', '基隆路', '基隆路二段', '基隆路三段']
+                    }
+                    return []
+                })
+
+                // 餐廳類型
+                const restaurantTypes = [
+                    '都可以',
+                    '台式料理',
+                    '日式料理',
+                    '韓式料理',
+                    '中式料理',
+                    '西式料理',
+                    '速食店',
+                    '麵食',
+                    '便當店'
+                ]
+
+                const restaurants = [
+                    {
+                        name: '八方雲集',
+                        type: '台式料理',
+                        price: '平價',
+                        distance: 300,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '羅斯福路',
+                        alley: '三段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['鍋貼', '水餃', '麵食', '湯品']
+                    },
+                    {
+                        name: '麥當勞',
+                        type: '速食店',
+                        price: '平價',
+                        distance: 500,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '新生南路',
+                        alley: '二段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['漢堡', '薯條', '飲料', '雞塊']
+                    },
+                    {
+                        name: 'Subway',
+                        type: '西式料理',
+                        price: '中價位',
+                        distance: 700,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '和平東路',
+                        alley: '二段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['潛艇堡', '沙拉', '飲料', '餅乾']
+                    },
+                    {
+                        name: '吉野家',
+                        type: '日式料理',
+                        price: '中價位',
+                        distance: 900,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '復興南路',
+                        alley: '二段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['牛丼', '豬丼', '咖哩飯', '味噌湯']
+                    },
+                    {
+                        name: '摩斯漢堡',
+                        type: '速食店',
+                        price: '中價位',
+                        distance: 1200,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '信義路',
+                        alley: '四段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['漢堡', '米漢堡', '沙拉', '飲料']
+                    },
+                    {
+                        name: '台大學生餐廳',
+                        type: '台式料理',
+                        price: '平價',
+                        distance: 200,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '羅斯福路',
+                        alley: '四段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['自助餐', '麵食', '炒飯', '湯品']
+                    },
+                    {
+                        name: '台大活大餐廳',
+                        type: '台式料理',
+                        price: '平價',
+                        distance: 250,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '新生南路',
+                        alley: '三段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['自助餐', '麵食', '炒飯', '湯品']
+                    },
+                    {
+                        name: '台大女九餐廳',
+                        type: '台式料理',
+                        price: '平價',
+                        distance: 300,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '新生南路',
+                        alley: '三段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['自助餐', '麵食', '炒飯', '湯品']
+                    },
+                    {
+                        name: '台大男七餐廳',
+                        type: '台式料理',
+                        price: '平價',
+                        distance: 350,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '新生南路',
+                        alley: '三段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['自助餐', '麵食', '炒飯', '湯品']
+                    },
+                    {
+                        name: '台大男八餐廳',
+                        type: '台式料理',
+                        price: '平價',
+                        distance: 400,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '新生南路',
+                        alley: '三段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['自助餐', '麵食', '炒飯', '湯品']
+                    },
+                    {
+                        name: '韓式炸雞店',
+                        type: '韓式料理',
+                        price: '中價位',
+                        distance: 600,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '和平東路',
+                        alley: '一段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['韓式炸雞', '年糕', '泡菜', '飲料']
+                    },
+                    {
+                        name: '日式拉麵店',
+                        type: '日式料理',
+                        price: '中價位',
+                        distance: 800,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '復興南路',
+                        alley: '一段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['拉麵', '煎餃', '炸雞', '飲料']
+                    },
+                    {
+                        name: '台式牛肉麵',
+                        type: '台式料理',
+                        price: '平價',
+                        distance: 450,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '羅斯福路',
+                        alley: '二段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['牛肉麵', '小菜', '滷味', '飲料']
+                    },
+                    {
+                        name: '義大利麵店',
+                        type: '西式料理',
+                        price: '中價位',
+                        distance: 1000,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '信義路',
+                        alley: '二段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['義大利麵', '燉飯', '沙拉', '飲料']
+                    },
+                    {
+                        name: '台式滷肉飯',
+                        type: '台式料理',
+                        price: '平價',
+                        distance: 550,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '新生南路',
+                        alley: '一段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['滷肉飯', '小菜', '湯品', '飲料']
+                    },
+                    {
+                        name: '日式咖哩店',
+                        type: '日式料理',
+                        price: '中價位',
+                        distance: 750,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '復興南路',
+                        alley: '三段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['咖哩飯', '炸豬排', '沙拉', '飲料']
+                    },
+                    {
+                        name: '韓式烤肉店',
+                        type: '韓式料理',
+                        price: '高價位',
+                        distance: 1100,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '信義路',
+                        alley: '三段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['烤肉', '泡菜', '年糕', '飲料']
+                    },
+                    {
+                        name: '台式炒麵店',
+                        type: '台式料理',
+                        price: '平價',
+                        distance: 650,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '和平東路',
+                        alley: '三段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['炒麵', '炒飯', '湯品', '飲料']
+                    },
+                    {
+                        name: '日式壽司店',
+                        type: '日式料理',
+                        price: '高價位',
+                        distance: 1300,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '復興南路',
+                        alley: '四段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['壽司', '生魚片', '味噌湯', '飲料']
+                    },
+                    {
+                        name: '韓式石鍋拌飯',
+                        type: '韓式料理',
+                        price: '中價位',
+                        distance: 850,
+                        city: 'taipei',
+                        district: '大安區',
+                        street: '信義路',
+                        alley: '一段',
+                        location: { lat: 25.0173, lng: 121.5398 },
+                        menu: ['石鍋拌飯', '泡菜', '海鮮煎餅', '飲料']
+                    }
+                ]
+
+                const filteredRestaurants = computed(() => {
+                    const maxDistance = walkingTime.value * 80 // 假設步行速度為 80 公尺/分鐘
+                    return restaurants.filter(restaurant => {
+                        // 檢查地區
+                        const matchesLocation = restaurant.city === selectedCity.value && 
+                            restaurant.district === selectedDistrict.value &&
+                            restaurant.street === selectedStreet.value
+                        
+                        // 檢查巷弄（如果有指定）
+                        const matchesAlley = !selectedAlley.value || 
+                            restaurant.alley?.includes(selectedAlley.value)
+                        
+                        // 檢查類型
+                        const matchesType = selectedTypes.value.includes('都可以') || 
+                            selectedTypes.value.length === 0 || 
+                            selectedTypes.value.includes(restaurant.type)
+                        
+                        // 檢查距離
+                        const withinDistance = restaurant.distance <= maxDistance
+                        
+                        // 檢查預算
+                        const priceRange = restaurant.price === '平價' ? 150 : 300
+                        const withinBudget = priceRange <= budget.value
+                        
+                        return matchesLocation && matchesAlley && 
+                               matchesType && withinDistance && withinBudget
+                    }).sort((a, b) => a.distance - b.distance)
+                })
+
+                const viewResults = () => {
+                    if (!selectedCity.value || !selectedDistrict.value || !selectedStreet.value) {
+                        alert('請選擇完整的地區資訊')
+                        return
+                    }
+
+                    if (selectedTypes.value.length === 0) {
+                        alert('請至少選擇一個餐廳類型')
+                        return
+                    }
+
+                    // 顯示結果頁面
+                    document.getElementById('searchPage').style.display = 'none'
+                    document.getElementById('resultsPage').style.display = 'block'
+                    
+                    // 更新結果數量
+                    document.getElementById('resultCount').textContent = filteredRestaurants.value.length
+                    
+                    // 顯示結果列表
+                    const resultsList = document.getElementById('resultsList')
+                    resultsList.innerHTML = filteredRestaurants.value.map(restaurant => `
+                        <div class="restaurant-card">
+                            <div class="flex items-start justify-between">
+                                <h3>${restaurant.name}</h3>
+                                <div class="flex items-center gap-4">
+                                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.name)}" 
+                                       target="_blank" 
+                                       rel="noopener noreferrer"
+                                       class="p-2 text-gray-500 hover:text-primary hover:bg-gray-100 rounded-full transition-all duration-200"
+                                       title="在 Google Maps 中查看"
+                                       onclick="event.stopPropagation()">
+                                        <svg class="w-6 h-6" viewBox="0 0 24 24">
+                                            <path fill="#4285F4" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                        </svg>
+                                    </a>
+                                    <a href="https://www.google.com/search?q=${encodeURIComponent(restaurant.name)}" 
+                                       target="_blank" 
+                                       rel="noopener noreferrer"
+                                       class="p-2 text-gray-500 hover:text-primary hover:bg-gray-100 rounded-full transition-all duration-200"
+                                       title="在 Google 中搜尋"
+                                       onclick="event.stopPropagation()">
+                                        <svg class="w-6 h-6" viewBox="0 0 24 24">
+                                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                                        </svg>
+                                    </a>
+                                    <label class="flex items-center" onclick="event.stopPropagation()">
+                                        <input type="checkbox" 
+                                            class="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                                            ${isRestaurantSelected(restaurant) ? 'checked' : ''}
+                                            onchange="app._instance.proxy.toggleRestaurant(${JSON.stringify(restaurant)})">
+                                    </label>
+                                </div>
+                            </div>
+                            <p>距離：${restaurant.distance} 公尺</p>
+                            <p>類型：${restaurant.type}</p>
+                            <p>價格：${restaurant.price}</p>
+                            <p>地址：${restaurant.street}${restaurant.alley ? ' ' + restaurant.alley : ''}</p>
+                            <div class="mt-4">
+                                <h4 class="font-bold mb-2">推薦菜單：</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    ${restaurant.menu.map(item => `
+                                        <span class="px-3 py-1 bg-gray-100 rounded-full text-sm">
+                                            ${item}
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')
+                }
+
+                const backToSearch = () => {
+                    document.getElementById('searchPage').style.display = 'block'
+                    document.getElementById('resultsPage').style.display = 'none'
+                }
+
+                const toggleType = (type) => {
+                    if (type === '都可以') {
+                        // 如果點擊「都可以」
+                        const index = selectedTypes.value.indexOf(type)
+                        if (index === -1) {
+                            // 如果「都可以」未被選中，則選中它並清空其他選項
+                            selectedTypes.value = ['都可以']
+                        } else {
+                            // 如果「都可以」已被選中，則取消選中
+                            selectedTypes.value = []
+                        }
+                    } else {
+                        // 如果點擊其他類型
+                        if (selectedTypes.value.includes('都可以')) {
+                            // 如果「都可以」已被選中，則取消選中「都可以」並選中當前類型
+                            selectedTypes.value = [type]
+                        } else {
+                            // 如果「都可以」未被選中，則正常切換當前類型的選中狀態
+                            const index = selectedTypes.value.indexOf(type)
+                            if (index === -1) {
+                                selectedTypes.value.push(type)
+                            } else {
+                                selectedTypes.value.splice(index, 1)
+                            }
+                        }
+                    }
+                }
+
+                const isTypeDisabled = (type) => {
+                    return type !== '都可以' && selectedTypes.value.includes('都可以')
+                }
+
+                const increaseWalkingTime = () => {
+                    if (walkingTime.value < 30) {
+                        walkingTime.value += 1
+                    }
+                }
+
+                const decreaseWalkingTime = () => {
+                    if (walkingTime.value > 5) {
+                        walkingTime.value -= 1
+                    }
+                }
+
+                const validateBudget = (event) => {
+                    let value = parseInt(event.target.value)
+                    if (isNaN(value)) {
+                        budget.value = 150
+                        return
+                    }
+                    if (value < 50) {
+                        budget.value = 50
+                    } else if (value > 1000) {
+                        budget.value = 1000
+                    } else {
+                        budget.value = value
+                    }
+                }
+
+                const isAllSelected = computed(() => {
+                    return filteredRestaurants.value.length > 0 && 
+                           selectedRestaurants.value.length === filteredRestaurants.value.length
+                })
+
+                const toggleSelectAll = () => {
+                    if (isAllSelected.value) {
+                        selectedRestaurants.value = []
+                    } else {
+                        selectedRestaurants.value = [...filteredRestaurants.value]
+                    }
+                    viewResults() // 重新渲染結果列表以更新所有 checkbox 的狀態
+                }
+
+                const toggleRestaurant = (restaurant) => {
+                    const index = selectedRestaurants.value.findIndex(r => r.name === restaurant.name)
+                    if (index === -1) {
+                        selectedRestaurants.value.push(restaurant)
+                    } else {
+                        selectedRestaurants.value.splice(index, 1)
+                    }
+                    viewResults() // 重新渲染結果列表以更新所有 checkbox 的狀態
+                }
+
+                const isRestaurantSelected = (restaurant) => {
+                    return selectedRestaurants.value.some(r => r.name === restaurant.name)
+                }
+
+                // 轉盤相關函數
+                const drawWheel = () => {
+                    const canvas = wheelCanvas.value
+                    const ctx = wheelCtx.value
+                    const centerX = canvas.width / 2
+                    const centerY = canvas.height / 2
+                    const radius = Math.min(centerX, centerY) - 40
+
+                    ctx.clearRect(0, 0, canvas.width, canvas.height)
+                    
+                    // 繪製轉盤背景
+                    ctx.beginPath()
+                    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+                    ctx.fillStyle = '#f3f4f6'
+                    ctx.fill()
+                    ctx.strokeStyle = '#e5e7eb'
+                    ctx.lineWidth = 2
+                    ctx.stroke()
+
+                    // 定義顏色陣列
+                    const colors = [
+                        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD',
+                        '#D4A5A5', '#9B59B6', '#3498DB', '#E67E22', '#2ECC71'
+                    ]
+
+                    // 繪製扇形
+                    const sliceAngle = (Math.PI * 2) / selectedRestaurants.value.length
+                    selectedRestaurants.value.forEach((restaurant, index) => {
+                        // 修改旋轉方向，使其順時針旋轉
+                        const startAngle = index * sliceAngle - wheelRotation.value
+                        const endAngle = (index + 1) * sliceAngle - wheelRotation.value
+
+                        ctx.beginPath()
+                        ctx.moveTo(centerX, centerY)
+                        ctx.arc(centerX, centerY, radius, startAngle, endAngle)
+                        ctx.closePath()
+                        
+                        // 使用顏色陣列中的顏色，如果超出則循環使用
+                        ctx.fillStyle = colors[index % colors.length]
+                        ctx.fill()
+                        
+                        // 繪製扇形邊框
+                        ctx.strokeStyle = '#ffffff'
+                        ctx.lineWidth = 2
+                        ctx.stroke()
+
+                        // 繪製文字
+                        ctx.save()
+                        ctx.translate(centerX, centerY)
+                        ctx.rotate(startAngle + sliceAngle / 2)
+                        ctx.textAlign = 'center'
+                        ctx.fillStyle = '#ffffff'
+                        ctx.font = 'bold 20px Arial'
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+                        ctx.shadowBlur = 2
+                        ctx.shadowOffsetX = 1
+                        ctx.shadowOffsetY = 1
+                        // 調整文字位置到色塊中間
+                        ctx.fillText(restaurant.name, radius * 0.5, 0)
+                        ctx.restore()
+                    })
+
+                    // 繪製指針
+                    ctx.beginPath()
+                    // 指針主體（狹長形狀，-90度）
+                    ctx.moveTo(centerX, centerY - radius + 20)
+                    ctx.lineTo(centerX, centerY - radius - 40)
+                    ctx.lineTo(centerX - 10, centerY - radius - 20)
+                    ctx.lineTo(centerX + 10, centerY - radius - 20)
+                    ctx.closePath()
+                    ctx.fillStyle = '#ef4444'
+                    ctx.fill()
+                    ctx.strokeStyle = '#dc2626'
+                    ctx.lineWidth = 2
+                    ctx.stroke()
+
+                    // 指針陰影
+                    ctx.beginPath()
+                    ctx.moveTo(centerX, centerY - radius + 20)
+                    ctx.lineTo(centerX, centerY - radius - 40)
+                    ctx.lineTo(centerX - 10, centerY - radius - 20)
+                    ctx.lineTo(centerX + 10, centerY - radius - 20)
+                    ctx.closePath()
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
+                    ctx.shadowBlur = 5
+                    ctx.shadowOffsetX = 2
+                    ctx.shadowOffsetY = 2
+                    ctx.fill()
+
+                    // 指針中心點
+                    ctx.beginPath()
+                    ctx.arc(centerX, centerY - radius - 20, 5, 0, Math.PI * 2)
+                    ctx.fillStyle = '#ffffff'
+                    ctx.fill()
+                    ctx.strokeStyle = '#dc2626'
+                    ctx.lineWidth = 2
+                    ctx.stroke()
+                }
+
+                const spinWheel = () => {
+                    if (isSpinning.value) return
+                    isSpinning.value = true
+                    
+                    // 設置初始速度和旋轉角度
+                    wheelSpeed.value = 0.5
+                    wheelRotation.value = 0
+                    
+                    // 計算目標旋轉圈數（3-5圈）
+                    const targetSpins = 3 + Math.random() * 2
+                    const targetRotation = targetSpins * Math.PI * 2
+                    
+                    // 設置動畫時間（5秒）
+                    const startTime = Date.now()
+                    const duration = 5000
+                    
+                    wheelAnimation.value = setInterval(() => {
+                        const currentTime = Date.now()
+                        const elapsed = currentTime - startTime
+                        const progress = Math.min(elapsed / duration, 1)
+                        
+                        // 使用緩動函數使轉動更自然
+                        const easeOut = 1 - Math.pow(1 - progress, 3)
+                        wheelRotation.value = easeOut * targetRotation
+                        
+                        drawWheel()
+
+                        if (progress >= 1) {
+                            clearInterval(wheelAnimation.value)
+                            isSpinning.value = false
+                            
+                            // 計算最終選中的餐廳
+                            const sliceAngle = (Math.PI * 2) / selectedRestaurants.value.length
+                            const normalizedRotation = wheelRotation.value % (Math.PI * 2)
+                            // 修正選中索引的計算方式，確保與指針指向一致
+                            const selectedIndex = (selectedRestaurants.value.length - Math.floor(normalizedRotation / sliceAngle)) % selectedRestaurants.value.length
+                            const selected = selectedRestaurants.value[selectedIndex]
+                            
+                            // 顯示結果
+                            setTimeout(() => {
+                                alert(`恭喜！今天吃 ${selected.name}！`)
+                                showWheelModal.value = false
+                            }, 500)
+                        }
+                    }, 16)
+                }
+
+                // 抽籤相關函數
+                const drawLottery = () => {
+                    if (isDrawing.value) return
+                    isDrawing.value = true
+                    
+                    setTimeout(() => {
+                        const randomIndex = Math.floor(Math.random() * selectedRestaurants.value.length)
+                        const selected = selectedRestaurants.value[randomIndex]
+                        isDrawing.value = false
+                        alert(`恭喜！今天吃 ${selected.name}！`)
+                    }, 2000)
+                }
+
+                // 刮刮樂相關函數
+                const initScratch = () => {
+                    const canvas = scratchCanvas.value
+                    const ctx = scratchCtx.value
+                    canvas.width = canvas.offsetWidth
+                    canvas.height = canvas.offsetHeight
+
+                    // 繪製背景
+                    ctx.fillStyle = '#f3f4f6'
+                    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+                    // 繪製文字
+                    const randomIndex = Math.floor(Math.random() * selectedRestaurants.value.length)
+                    const selected = selectedRestaurants.value[randomIndex]
+                    ctx.fillStyle = '#1f2937'
+                    ctx.font = '24px Arial'
+                    ctx.textAlign = 'center'
+                    ctx.textBaseline = 'middle'
+                    ctx.fillText(selected.name, canvas.width / 2, canvas.height / 2)
+
+                    // 設置刮刮樂效果
+                    ctx.globalCompositeOperation = 'destination-out'
+                    ctx.lineWidth = 30
+                    ctx.lineCap = 'round'
+                    ctx.lineJoin = 'round'
+                }
+
+                const handleScratch = (e) => {
+                    const canvas = scratchCanvas.value
+                    const ctx = scratchCtx.value
+                    const rect = canvas.getBoundingClientRect()
+                    const x = e.clientX - rect.left
+                    const y = e.clientY - rect.top
+
+                    ctx.beginPath()
+                    ctx.moveTo(x, y)
+                    ctx.lineTo(x, y)
+                    ctx.stroke()
+                }
+
+                const resetScratch = () => {
+                    initScratch()
+                }
+
+                // 修改原有的功能函數
+                const startWheel = () => {
+                    if (selectedRestaurants.value.length === 0) {
+                        alert('請至少選擇一間餐廳')
+                        return
+                    }
+                    showWheelModal.value = true
+                    
+                    // 確保在顯示模態框後初始化畫布
+                    setTimeout(() => {
+                        const canvas = wheelCanvas.value
+                        wheelCtx.value = canvas.getContext('2d')
+                        canvas.width = canvas.offsetWidth
+                        canvas.height = canvas.offsetHeight
+                        drawWheel()
+                    }, 100)
+                }
+
+                const startLottery = () => {
+                    if (selectedRestaurants.value.length === 0) {
+                        alert('請至少選擇一間餐廳')
+                        return
+                    }
+                    showLotteryModal.value = true
+                }
+
+                const startScratch = () => {
+                    if (selectedRestaurants.value.length === 0) {
+                        alert('請至少選擇一間餐廳')
+                        return
+                    }
+                    showScratchModal.value = true
+                    onMounted(() => {
+                        initScratch()
+                        const canvas = scratchCanvas.value
+                        canvas.addEventListener('mousemove', handleScratch)
+                        canvas.addEventListener('touchmove', (e) => {
+                            e.preventDefault()
+                            const touch = e.touches[0]
+                            handleScratch(touch)
+                        })
+                    })
+                }
+
+                const addCustomType = () => {
+                    if (!customType.value.trim()) return
+                    
+                    const type = customType.value.trim()
+                    if (!customTypes.value.includes(type)) {
+                        customTypes.value.push(type)
+                    }
+                    customType.value = ''
+                }
+
+                const removeCustomType = (type) => {
+                    const index = customTypes.value.indexOf(type)
+                    if (index > -1) {
+                        customTypes.value.splice(index, 1)
+                    }
+                    // 如果該類型已被選中，從選中列表中移除
+                    const selectedIndex = selectedTypes.value.indexOf(type)
+                    if (selectedIndex > -1) {
+                        selectedTypes.value.splice(selectedIndex, 1)
+                    }
+                }
+
+                return {
+                    currentPage,
+                    walkingTime,
+                    selectedTypes,
+                    customType,
+                    showDetails,
+                    selectedRestaurant,
+                    restaurantTypes,
+                    filteredRestaurants,
+                    selectedRestaurants,
+                    wheelCanvas,
+                    isSpinning,
+                    showSelectionMethodModal,
+                    selectedCity,
+                    selectedDistrict,
+                    selectedStreet,
+                    selectedAlley,
+                    budget,
+                    districts,
+                    streets,
+                    toggleType,
+                    viewResults,
+                    backToSearch,
+                    isTypeDisabled,
+                    increaseWalkingTime,
+                    decreaseWalkingTime,
+                    validateBudget,
+                    isAllSelected,
+                    toggleSelectAll,
+                    toggleRestaurant,
+                    showWheelModal,
+                    showLotteryModal,
+                    showScratchModal,
+                    isDrawing,
+                    scratchCanvas,
+                    spinWheel,
+                    drawLottery,
+                    resetScratch,
+                    startWheel,
+                    startLottery,
+                    startScratch,
+                    customTypes,
+                    addCustomType,
+                    removeCustomType
+                }
+            }
+        })
+
+        app.mount('#app')
+    </script>
+</body>
+</html> 
